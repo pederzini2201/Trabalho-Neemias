@@ -6,7 +6,10 @@ from io import BytesIO
 # Configuração da página
 st.set_page_config(page_title="📊 Dashboard Moderno", layout="wide")
 
-# Estilo fixo: tema escuro + sidebar cinza escuro + métricas e textos brancos + botão estilizado
+# --- INÍCIO DO ESTILO CSS CUSTOMIZADO ---
+# ATENÇÃO: Se o erro "removeChild" persistir no deploy,
+# comente temporariamente esta seção inteira de st.markdown para testar.
+# Conflitos no CSS são uma causa comum desse erro no Streamlit Cloud.
 st.markdown("""
     <style>
     body, [class*="stApp"] {
@@ -59,11 +62,13 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+# --- FIM DO ESTILO CSS CUSTOMIZADO ---
 
 plotly_template = "plotly_dark"
 
 def to_excel(df):
     output = BytesIO()
+    # Usar engine='xlsxwriter' é importante para o Streamlit Cloud, pois 'openpyxl' pode ter dependências extras.
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Dados')
     return output.getvalue()
@@ -87,7 +92,8 @@ st.sidebar.markdown("---")
 
 # Filtros
 st.sidebar.header("🔎 Filtros")
-usuarios = st.sidebar.multiselect("👤 Usuários", df['Usuário'].unique(), default=df['Usuário'].unique())
+# Usar um set para unique values pode ser um pouco mais eficiente para listas grandes, mas .unique() já funciona bem
+usuarios = st.sidebar.multiselect("👤 Usuários", sorted(df['Usuário'].unique()), default=sorted(df['Usuário'].unique()))
 date_range = st.sidebar.date_input("📅 Período", [df['Data'].min(), df['Data'].max()])
 
 inicio, fim = date_range
@@ -135,6 +141,10 @@ with col4:
     st.subheader("📊 Radar de Logins por Dia da Semana")
     radar_df = filtro_df.copy()
     radar_df['Dia'] = radar_df['Data'].dt.day_name()
+    # Ordem dos dias para o gráfico radar (se desejar uma ordem específica)
+    # day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    # radar_df['Dia'] = pd.Categorical(radar_df['Dia'], categories=day_order, ordered=True)
+
     radar_data = radar_df.groupby(['Dia', 'Usuário'])['Logins'].sum().unstack().fillna(0)
     fig4 = px.line_polar(
         radar_data.reset_index(),
@@ -155,6 +165,7 @@ def formatar_presenca(row):
 filtro_df_formatado = filtro_df.copy()
 filtro_df_formatado['P.da Semana'] = filtro_df_formatado.apply(formatar_presenca, axis=1)
 
+# Usar st.markdown para exibir HTML de dataframe
 st.markdown(
     filtro_df_formatado.to_html(escape=False, index=False),
     unsafe_allow_html=True

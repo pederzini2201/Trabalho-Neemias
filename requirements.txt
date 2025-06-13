@@ -1,5 +1,4 @@
 streamlit 
 pandas 
-numpy 
-matplotlib.pyplot
-seaborn 
+plotly.express 
+from io import BytesIO
